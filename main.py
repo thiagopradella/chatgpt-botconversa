@@ -13,22 +13,25 @@ app = FastAPI()
 @app.post("/webhook")
 async def receber_webhook(request: Request):
     data = await request.json()
-    root = data.get("root", {})  # <- Aqui pegamos a chave "root"
+    root = data.get("root", {})
+
     mensagem = root.get("mensagem", "")
     fluxo = root.get("fluxo", "")
     etapa = root.get("etapa", "")
-    
+
     resposta = gerar_resposta_chatgpt(mensagem, fluxo, etapa)
+
     return {"response": resposta}
 
 def gerar_resposta_chatgpt(mensagem: str, fluxo: str, etapa: str) -> str:
-    prompt = f"Usuário no fluxo '{fluxo}' na etapa '{etapa}' disse: {mensagem}\nResponda de forma objetiva e clara:"
-    
-    response = openai.ChatCompletion.create(
+    prompt = f"Usuário no fluxo '{fluxo}' na etapa '{etapa}' disse: {mensagem}\nResponda de forma objetiva e clara."
+
+    resposta = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Você é um assistente jurídico atencioso."},
             {"role": "user", "content": prompt}
         ]
     )
-    return response.choices[0].message.content
+
+    return resposta.choices[0].message.content
