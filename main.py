@@ -1,48 +1,37 @@
 from fastapi import FastAPI, Request
+from pydantic import BaseModel
 import openai
-import requests
 import os
+
+from openai import OpenAI
 
 app = FastAPI()
 
-# Pegando as chaves das variáveis de ambiente
+# Configura chave da API
 openai.api_key = os.getenv("OPENAI_API_KEY")
-BOTCONVERSA_TOKEN = os.getenv("BOTCONVERSA_TOKEN")
 
-# Função que envia a pergunta ao ChatGPT
-def gerar_resposta_chatgpt(mensagem_usuario, fluxo, etapa):
-    prompt = f"""
-Você é um assistente virtual que está conversando com um cliente no fluxo "{fluxo}", etapa {etapa}.
-Mensagem do cliente: "{mensagem_usuario}"
+client = OpenAI()
 
-Baseado nisso, responda de forma simpática e direta, guiando o usuário para a próxima etapa do fluxo.
-"""
-    resposta = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return resposta.choices[0].message.content.strip()
-
-# Rota que o BotConversa vai chamar
 @app.post("/webhook")
 async def receber_webhook(request: Request):
     data = await request.json()
-
     mensagem = data.get("mensagem", "")
-    numero = data.get("numero", "")
-    fluxo = data.get("fluxo", "Desconhecido")
-    etapa = data.get("etapa", "1")
+    fluxo = data.get("fluxo", "")
+    etapa = data.get("etapa", "")
 
     resposta = gerar_resposta_chatgpt(mensagem, fluxo, etapa)
 
-    # Enviando a resposta de volta ao BotConversa
-    requests.post(
-        "https://api.botconversa.com.br/api/v1/mensagem",
-        json={
-            "numero": numero,
-            "mensagem": resposta,
-            "token": BOTCONVERSA_TOKEN
-        }
+    return {"response": resposta}
+
+def gerar_resposta_chatgpt(mensagem: str, fluxo: str, etapa: str) -> str:
+    prompt = f"Usuário no fluxo '{fluxo}' na etapa '{etapa}' disse: {mensagem}\nResponda de forma objetiva e clara:"
+    
+    resposta = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Você é um assistente jurídico atencioso."},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    return {"status": "ok", "resposta": resposta}
+    return resposta.choices[0].message.content
