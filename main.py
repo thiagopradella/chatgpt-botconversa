@@ -25,4 +25,3 @@ async def receber_webhook(request: Request):
 
 def gerar_resposta_chatgpt
 return resposta.choices[0].message.content
-
