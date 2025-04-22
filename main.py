@@ -1,38 +1,41 @@
 from fastapi import FastAPI, Request
 import openai
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
-# Configure sua chave da OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.post("/webhook")
 async def receber_webhook(request: Request):
     data = await request.json()
-    root = data.get("root", {})  # pega o conteúdo do campo 'root'
+    
+    root = data.get("root", {})
     
     mensagem = root.get("mensagem", "")
-    numero = root.get("numero", "")
     fluxo = root.get("fluxo", "")
     etapa = root.get("etapa", "")
-
-    resposta = gerar_resposta_chatgpt(mensagem, fluxo, etapa)
-
+    numero = root.get("numero", "")
+    
+    resposta = gerar_resposta_chatgpt(mensagem, fluxo, etapa, numero)
+    
     return {"response": resposta}
 
-def gerar_resposta_chatgpt(mensagem: str, fluxo: str, etapa: str) -> str:
+def gerar_resposta_chatgpt(mensagem: str, fluxo: str, etapa: str, numero: str) -> str:
     prompt = (
-        f"Usuário no fluxo '{fluxo}' na etapa '{etapa}' disse: {mensagem}.\n"
-        f"Responda de forma clara, objetiva e amigável:"
+        f"O usuário com número {numero}, no fluxo '{fluxo}' e na etapa '{etapa}', "
+        f"disse: {mensagem}\nResponda de forma clara e objetiva."
     )
-
-    response = openai.chat.completions.create(
+    
+    resposta = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "Você é um assistente jurídico atencioso."},
+            {"role": "system", "content": "Você é um assistente jurídico cordial e claro."},
             {"role": "user", "content": prompt}
         ]
     )
-
-    return response.choices[0].message.content.strip()
+    
+    return resposta.choices[0].message.content
